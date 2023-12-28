@@ -1,14 +1,15 @@
 #
-# inovex GitLab CI: Android v1.0
-# https://hub.docker.com/r/inovex/gitlab-ci-android/
-# https://www.inovex.de
+# amv007 GitLab CI: Android v1.0
+# https://hub.docker.com/r/amv007/gitlab-ci-android/
 # For JDK 11 (Gradle 7+) use: before_script: - export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 # For JDK 11 (Gradle 8+) use: before_script: - export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+# For JDK 11 (Gradle 8+) use: before_script: - export JAVA_HOME=/usr/lib/jvm/java-19-openjdk-amd64
+# For JDK 11 (Gradle 8+) use: before_script: - export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 # For JDK 8: before_script: - export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 #
 
-FROM ubuntu:20.04
-LABEL maintainer inovex GmbH
+FROM ubuntu:22.04
+LABEL maintainer amv007
 
 ENV NDK_VERSION r25c
 
@@ -16,7 +17,7 @@ ENV ANDROID_SDK_ROOT "/sdk"
 ENV ANDROID_NDK_HOME "/ndk"
 ENV PATH "$PATH:${ANDROID_SDK_ROOT}/bin"
 
-ENV DEBIAN_FRONTEND=noninteractive 
+ENV DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get -qq update && apt-get install -y locales \
 	&& localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
@@ -30,6 +31,8 @@ RUN apt-get update && apt-get install -qqy --no-install-recommends \
     openjdk-8-jdk \
     openjdk-11-jdk \
     openjdk-17-jdk \
+    openjdk-19-jdk \
+    openjdk-21-jdk \
     checkstyle \
     unzip \
     curl \
@@ -45,10 +48,9 @@ RUN apt-get update && apt-get install -qqy --no-install-recommends \
 RUN rm -f /etc/ssl/certs/java/cacerts; \
     /var/lib/dpkg/info/ca-certificates-java.postinst configure
 
-# Install Google's repo tool version 1.23 (https://source.android.com/setup/build/downloading#installing-repo)
-RUN curl -o /usr/local/bin/repo https://storage.googleapis.com/git-repo-downloads/repo \
- && echo "18ec0f6e1ac3c12293a4521a5c2224d96e4dd5ee49662cc837c2dd854ef824e5 /usr/local/bin/repo" | sha256sum --strict -c - \
- && chmod a+x /usr/local/bin/repo
+#add latest Google git-repo
+ADD https://storage.googleapis.com/git-repo-downloads/repo /usr/local/bin/
+RUN chmod +x /usr/local/bin/*
 
 # download and unzip latest command line tools
 RUN export CMD_LINE_TOOLS_VERSION="$(curl -s https://developer.android.com/studio/index.html | grep -oP 'commandlinetools-linux-\K\d+' | uniq)" && \
@@ -73,10 +75,17 @@ RUN ${ANDROID_SDK_ROOT}/cmdline-tools/bin/sdkmanager --update --sdk_root=${ANDRO
 RUN while read -r pkg; do PKGS="${PKGS}${pkg} "; done < /sdk/pkg.txt && \
     ${ANDROID_SDK_ROOT}/cmdline-tools/bin/sdkmanager ${PKGS} --sdk_root=${ANDROID_SDK_ROOT}
 
-RUN mkdir /tmp/android-ndk && \
+RUN mkdir -p /tmp/android-ndk && \
     cd /tmp/android-ndk && \
     curl -s -O https://dl.google.com/android/repository/android-ndk-${NDK_VERSION}-linux.zip && \
     unzip -q android-ndk-${NDK_VERSION}-linux.zip && \
     mv ./android-ndk-${NDK_VERSION} ${ANDROID_NDK_HOME} && \
     cd ${ANDROID_NDK_HOME} && \
     rm -rf /tmp/android-ndk
+
+RUN mkdir -p $HOME/.gradle && \
+    echo "org.gradle.parallel=true" >> $HOME/.gradle/gradle.properties && \
+    echo "org.gradle.daemon=true" >> $HOME/.gradle/gradle.properties && \
+    echo "org.gradle.caching=true" >> $HOME/.gradle/gradle.properties && \
+    echo "org.gradle.jvmargs=-Xmx4096M" >> $HOME/.gradle/gradle.properties && \
+    echo "createReports=false" >> $HOME/.gradle/gradle.properties
