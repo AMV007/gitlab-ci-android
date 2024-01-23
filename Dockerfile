@@ -2,9 +2,9 @@
 # amv007 GitLab CI: Android v1.0
 # https://hub.docker.com/r/amv007/gitlab-ci-android/
 # For JDK 11 (Gradle 7+) use: before_script: - export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
-# For JDK 11 (Gradle 8+) use: before_script: - export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-# For JDK 11 (Gradle 8+) use: before_script: - export JAVA_HOME=/usr/lib/jvm/java-19-openjdk-amd64
-# For JDK 11 (Gradle 8+) use: before_script: - export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+# For JDK 17 (Gradle 8+) use: before_script: - export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+# For JDK 19 (Gradle 8+) use: before_script: - export JAVA_HOME=/usr/lib/jvm/java-19-openjdk-amd64
+# For JDK 22 (Gradle 8+) use: before_script: - export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
 # For JDK 8: before_script: - export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
 #
 
@@ -22,6 +22,8 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get -qq update && apt-get install -y locales \
 	&& localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
 ENV LANG en_US.UTF-8
+
+RUN apt-get update && apt-get upgrade -y
 
 # install necessary packages
 # prevent installation of openjdk-11-jre-headless with a trailing minus,
@@ -42,6 +44,9 @@ RUN apt-get update && apt-get install -qqy --no-install-recommends \
     python-is-python3 \
     ninja-build \
     build-essential \
+    unoconv \
+    zip \
+    libreoffice-writer \
   && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # pre-configure some ssl certs
@@ -83,6 +88,7 @@ RUN mkdir -p /tmp/android-ndk && \
     cd ${ANDROID_NDK_HOME} && \
     rm -rf /tmp/android-ndk
 
+# Tune gradle for more fast build
 RUN mkdir -p $HOME/.gradle && \
     echo "org.gradle.parallel=true" >> $HOME/.gradle/gradle.properties && \
     echo "org.gradle.daemon=true" >> $HOME/.gradle/gradle.properties && \
